@@ -58,7 +58,7 @@
 #' translate_sql(if (x > 5) "big" else "small")
 #'
 #' # Infix functions are passed onto SQL with % removed
-#' translate_sql(first %like% "Had*")
+#' translate_sql(first %like% "Had%")
 #' translate_sql(first %is% NULL)
 #' translate_sql(first %in% c("John", "Roger", "Robert"))
 #'
@@ -143,6 +143,9 @@ translate_sql_ <- function(dots,
   variant <- sql_translate_env(con)
 
   if (window) {
+    old_con <- set_partition_con(con)
+    on.exit(set_partition_con(old_con), add = TRUE)
+
     old_group <- set_partition_group(vars_group)
     on.exit(set_partition_group(old_group), add = TRUE)
 

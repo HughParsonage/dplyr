@@ -21,7 +21,7 @@ A vector as long as the longest LHS, with the type (and
   generate an error.
 }
 \description{
-This function allows you to vectorise mutiple \code{if} and \code{else if}
+This function allows you to vectorise multiple \code{if} and \code{else if}
 statements. It is an R equivalent of the SQL \code{CASE WHEN} statement.
 }
 \examples{
@@ -37,8 +37,8 @@ case_when(
 # proceed from the most specific to the most general. This won't work:
 case_when(
   TRUE ~ as.character(x),
-  x \%\% 5 == 0 ~ "fizz",
-  x \%\% 7 == 0 ~ "buzz",
+  x \%\%  5 == 0 ~ "fizz",
+  x \%\%  7 == 0 ~ "buzz",
   x \%\% 35 == 0 ~ "fizz buzz"
 )
 }

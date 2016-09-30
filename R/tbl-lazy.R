@@ -33,11 +33,6 @@ print.tbl_lazy <- function(x, ...) {
 
 # Single table methods ----------------------------------------------------
 
-add_op_single <- function(name, .data, dots = list(), args = list()) {
-  .data$ops <- op_single(name, x = .data$ops, dots = dots, args = args)
-  .data
-}
-
 #' @export
 filter_.tbl_lazy <- function(.data, ..., .dots) {
   dots <- lazyeval::all_dots(.dots, ...)
@@ -78,6 +73,11 @@ mutate_.tbl_lazy <- function(.data, ..., .dots) {
 group_by_.tbl_lazy <- function(.data, ..., .dots, add = TRUE) {
   dots <- lazyeval::all_dots(.dots, ..., all_named = TRUE)
   add_op_single("group_by", .data, dots = dots, args = list(add = add))
+}
+
+#' @export
+head.tbl_lazy <- function(x, n = 6L, ...) {
+  add_op_single("head", x, args = list(n = n))
 }
 
 #' @export

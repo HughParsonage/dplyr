@@ -17,6 +17,7 @@ knitr::opts_chunk$set(
 # dplyr
 
 [![Build Status](https://travis-ci.org/hadley/dplyr.png?branch=master)](https://travis-ci.org/hadley/dplyr)
+[![AppVeyor Build Status](https://ci.appveyor.com/api/projects/status/github/hadley/dplyr?branch=master&svg=true)](https://ci.appveyor.com/project/hadley/dplyr)
 [![CRAN_Status_Badge](http://www.r-pkg.org/badges/version/dplyr)](http://cran.r-project.org/package=dplyr)
 [![Coverage Status](https://img.shields.io/codecov/c/github/hadley/dplyr/master.svg)](https://codecov.io/github/hadley/dplyr?branch=master)
 
@@ -57,7 +58,7 @@ If you encounter a clear bug, please file a minimal reproducible example on [git
 
 To get started, read the notes below, then read the intro vignette: `vignette("introduction", package = "dplyr")`. To make the most of dplyr, I also recommend that you familiarise yourself with the principles of [tidy data](http://vita.had.co.nz/papers/tidy-data.html): this will help you get your data into a form that works well with dplyr, ggplot2 and R's many modelling functions.
 
-If you need more, help I recommend the following (paid) resources:
+If you need more help, I recommend the following (paid) resources:
 
 * [dplyr](https://www.datacamp.com/courses/dplyr) on datacamp, by Garrett
   Grolemund. Learn the basics of dplyr at your own pace in this interactive 

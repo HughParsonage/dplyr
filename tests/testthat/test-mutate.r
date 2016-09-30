@@ -352,7 +352,7 @@ test_that("row_number handles empty data frames (#762)", {
 })
 
 test_that("no utf8 invasion (#722)", {
-  skip_on_cran()
+  skip_on_os("windows")
 
   source("utf-8.R", local = TRUE)
 })
@@ -552,7 +552,7 @@ test_that("grouped mutate does not drop grouping attributes (#1020)", {
 
 test_that("grouped mutate errors on incompatible column type (#1641)", {
   df <- data.frame(ID = rep(1:5, each = 3), x = 1:15) %>% group_by(ID)
-  expect_error( mutate(df, foo = mean), "unsupported type for column" )
+  expect_error( mutate(df, foo = mean), 'Unsupported type CLOSXP for column "foo"')
 })
 
 test_that("lead/lag works on more complex expressions (#1588)", {
@@ -570,7 +570,6 @@ test_that("Adding a Column of NA to a Grouped Table gives expected results (#164
 })
 
 test_that("Deep copies are performed when needed (#1463)", {
-
   res <- data.frame(prob = c(F,T)) %>%
     rowwise %>%
     mutate(model = list(x=prob) )
@@ -581,5 +580,16 @@ test_that("Deep copies are performed when needed (#1463)", {
     mutate(model = list(y=x) )
   expect_equal(res$model[[1]], 1:3)
   expect_equal(res$model[[4]], 4)
+})
 
+test_that( "ntile falls back to R (#1750)", {
+  res <- mutate( iris, a = ntile("Sepal.Length", 3))
+  expect_equal( res$a, rep(1, 150))
+})
+
+test_that("mutate fails gracefully on raw columns (#1803)", {
+  df <- data_frame(a = 1:3, b = as.raw(1:3))
+  expect_error( mutate(df, a = 1), 'Unsupported type RAWSXP for column "b"' )
+  expect_error( mutate(df, b = 1), 'Unsupported type RAWSXP for column "b"' )
+  expect_error( mutate(df, c = 1), 'Unsupported type RAWSXP for column "b"' )
 })

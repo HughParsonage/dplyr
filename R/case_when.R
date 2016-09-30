@@ -1,6 +1,6 @@
 #' A general vectorised if.
 #'
-#' This function allows you to vectorise mutiple \code{if} and \code{else if}
+#' This function allows you to vectorise multiple \code{if} and \code{else if}
 #' statements. It is an R equivalent of the SQL \code{CASE WHEN} statement.
 #'
 #' @param ... A sequence of two-sided formulas. The left hand side (LHS)
@@ -27,8 +27,8 @@
 #' # proceed from the most specific to the most general. This won't work:
 #' case_when(
 #'   TRUE ~ as.character(x),
-#'   x %% 5 == 0 ~ "fizz",
-#'   x %% 7 == 0 ~ "buzz",
+#'   x %%  5 == 0 ~ "fizz",
+#'   x %%  7 == 0 ~ "buzz",
 #'   x %% 35 == 0 ~ "fizz buzz"
 #' )
 case_when <- function(...) {
@@ -74,7 +74,7 @@ case_when <- function(...) {
     out <- replace_with(
       out, query[[i]] & !replaced, value[[i]],
       paste0("RHS of case ", i, " (", deparse_trunc(f_rhs(formulas[[i]])), ")"))
-    replaced <- replaced | query[[i]]
+    replaced <- replaced | (query[[i]] & !is.na(query[[i]]))
   }
 
   out

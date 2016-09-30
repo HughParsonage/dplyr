@@ -29,6 +29,10 @@ test_that("bind_cols handles lists (#1104)", {
   expect_equal(bind_cols(list(l1, l2)), exp)
 })
 
+test_that("bind_cols handles empty argument list (#1963)", {
+  expect_equal(bind_cols(), data.frame())
+})
+
 # rows --------------------------------------------------------------------
 
 df_var <- data_frame(
@@ -153,8 +157,8 @@ test_that("bind_rows doesn't promote integer/numeric to factor", {
   df2 <- data_frame(a = 1L)
   df3 <- data_frame(a = 1)
 
-  expect_error(bind_rows(df1, df2), "incompatible type")
-  expect_error(bind_rows(df1, df3), "incompatible type")
+  expect_error(bind_rows(df1, df2), "from factor to integer")
+  expect_error(bind_rows(df1, df3), "from factor to numeric")
 })
 
 
@@ -347,15 +351,10 @@ test_that("bind_rows handles promotion to strings (#1538)", {
   df3 <- data_frame(b=factor(c("A","B")))
   df4 <- data_frame(b=c("C","D"))
 
-  df13 <- bind_rows(df1,df3)
-  df14 <- bind_rows(df1,df4)
-  df23 <- bind_rows(df2,df3)
-  df24 <- bind_rows(df2,df4)
-
-  expect_equal(df13$b, c("1", "2", "A", "B") )
-  expect_equal(df14$b, c("1", "2", "C", "D") )
-  expect_equal(df23$b, c("1", "2", "A", "B") )
-  expect_equal(df24$b, c("1", "2", "C", "D") )
+  expect_error( bind_rows(df1,df3) )
+  expect_error( bind_rows(df1,df4) )
+  expect_error( bind_rows(df2,df3) )
+  expect_error( bind_rows(df2,df4) )
 })
 
 test_that("bind_rows infers classes from first result (#1692)", {
@@ -390,4 +389,10 @@ test_that("bind_cols infers classes from first result (#1692)", {
   expect_equal( class(bind_rows(d4,d1)), c("rowwise_df", "tbl_df", "tbl", "data.frame") )
   expect_equal( class(bind_rows(d5,d1)), c("tbl_df", "tbl", "data.frame") )
 
+})
+
+test_that("bind_rows rejects POSIXlt columns (#1789)", {
+  df <- data_frame(x = Sys.time() + 1:12)
+  df$y <- as.POSIXlt(df$x)
+  expect_error(bind_rows(df, df), "not supported")
 })

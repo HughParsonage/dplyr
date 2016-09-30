@@ -140,7 +140,6 @@ test_that("univariate left join has all columns, all rows", {
 })
 
 test_that("can control suffixes with suffix argument", {
-
   j1 <- inner_join(e, f, "x", suffix = c("1", "2"))
   j2 <- left_join(e, f, "x", suffix = c("1", "2"))
   j3 <- right_join(e, f, "x", suffix = c("1", "2"))
@@ -151,7 +150,6 @@ test_that("can control suffixes with suffix argument", {
   expect_named(j3, c("x", "z1", "z2"))
   expect_named(j4, c("x", "z1", "z2"))
 })
-
 
 test_that("inner_join does not segfault on NA in factors (#306)", {
   a <- data.frame(x=c("p", "q", NA), y=c(1, 2, 3), stringsAsFactors=TRUE)
@@ -183,18 +181,6 @@ test_that("join handles type promotions #123", {
   res <- semi_join(df, match, c("V1", "V2"))
   expect_equal( res$V2, 3:4 )
   expect_equal( res$V3, c(103L, 109L) )
-
-  df1 <- data.frame( a = c("a", "b" ), b = 1:2, stringsAsFactors = TRUE )
-  df2 <- data.frame( a = c("a", "b" ), c = 4:5, stringsAsFactors = FALSE )
-
-  expect_warning(
-    semi_join( df1, df2, "a" ),
-    "joining factor and character vector"
-  )
-  expect_warning(
-    semi_join( df2, df1, "a" ),
-    "joining character vector and factor"
-  )
 })
 
 test_that("indices don't get mixed up when nrow(x) > nrow(y). #365",{
@@ -209,14 +195,29 @@ test_that("indices don't get mixed up when nrow(x) > nrow(y). #365",{
 test_that("join functions error on column not found #371", {
   expect_error(
     left_join(data.frame(x=1:5), data.frame(y=1:5), by="x"),
-    "cannot join on columns 'x'"
+    "column not found in rhs"
   )
   expect_error(
     left_join(data.frame(x=1:5), data.frame(y=1:5), by="y"),
-    "cannot join on columns 'y'"
+    "column not found in lhs"
   )
   expect_error(
     left_join(data.frame(x=1:5), data.frame(y=1:5)),
+    "No common variables"
+  )
+})
+
+test_that("join functions error on column not found for SQL sources #1928", {
+  expect_error(
+    left_join(memdb_frame(x=1:5), memdb_frame(y=1:5), by="x"),
+    "column not found in rhs"
+  )
+  expect_error(
+    left_join(memdb_frame(x=1:5), memdb_frame(y=1:5), by="y"),
+    "column not found in lhs"
+  )
+  expect_error(
+    left_join(memdb_frame(x=1:5), memdb_frame(y=1:5)),
     "No common variables"
   )
 })
@@ -372,11 +373,11 @@ test_that("joins between factor and character coerces to character with a warnin
 # Guessing variables in x and y ------------------------------------------------
 
 test_that("unnamed vars are the same in both tables", {
-  by1 <- common_by(c("x", "y", "z"))
+  by1 <- common_by_from_vector(c("x", "y", "z"))
   expect_equal(by1$x, c("x", "y", "z"))
   expect_equal(by1$y, c("x", "y", "z"))
 
-  by2 <- common_by(c("x" = "a", "y", "z"))
+  by2 <- common_by_from_vector(c("x" = "a", "y", "z"))
   expect_equal(by2$x, c("x", "y", "z"))
   expect_equal(by2$y, c("a", "y", "z"))
 })
@@ -547,6 +548,67 @@ test_that("joins allows extra attributes if they are identical (#1636)", {
   res <- left_join(tbl_left, tbl_right, by = 'i')
   expect_equal( attr(res$i, "label"), "iterator" )
   expect_equal( attr(res$i, "foo"), "bar" )
+})
 
+test_that("joins work with factors of different levels (#1712)", {
+  d1 <- iris[, c("Species", "Sepal.Length")]
+  d2 <- iris[, c("Species", "Sepal.Width")]
+  d2$Species <- factor(as.character(d2$Species), levels=rev(levels(d1$Species)))
+  expect_warning( res1 <- left_join(d1, d2, by="Species") )
+
+  d1$Species <- as.character(d1$Species)
+  d2$Species <- as.character(d2$Species)
+  res2 <- left_join(d1, d2, by="Species")
+  expect_equal(res1, res2)
+})
+
+test_that("anti and semi joins give correct result when by variable is a factor (#1571)", {
+  big <- data.frame(letter = rep(c('a', 'b'), each = 2), number = 1:2)
+  small <- data.frame(letter = 'b')
+  expect_warning( aj_result <- anti_join(big, small, by = "letter"), NA )
+  expect_equal( aj_result$number, 1:2)
+  expect_equal( aj_result$letter, factor(c("a", "a"), levels = c("a", "b")) )
+
+  expect_warning( sj_result <- semi_join(big, small, by = "letter"), NA )
+  expect_equal( sj_result$number, 1:2)
+  expect_equal( sj_result$letter, factor(c("b", "b"), levels = c("a", "b")) )
+})
+
+test_that("inner join not crashing (#1559)", {
+  df3 <- data_frame(
+    id = c(102, 102, 102, 121),
+    name = c("qwer", "qwer", "qwer", "asdf"),
+    k = factor(c("one", "two", "total", "one"), levels = c("one", "two", "total")),
+    total = factor(c("tot", "tot", "tot", "tot"), levels = c("tot", "plan", "fact")),
+    v = c(NA_real_, NA_real_, NA_real_, NA_real_),
+    btm = c(25654.957609, 29375.7547216667, 55030.7123306667, 10469.3523273333),
+    top = c(22238.368946, 30341.516924, 52579.88587, 9541.893144)
+  )
+  df4 <- data_frame(
+    id = c(102, 102, 102, 121),
+    name = c("qwer", "qwer", "qwer", "asdf"),
+    k = factor(c("one", "two", "total", "one"), levels = c("one", "two", "total")),
+    type = factor(c("fact", "fact", "fact", "fact"), levels = c("tot", "plan", "fact")),
+    perc = c(0.15363485835208, -0.0318297270618471, 0.0466114830816894, 0.0971986553754823)
+  )
+  # all we want here is to test that this does not crash
+  expect_message( res <- replicate(100, df3 %>% inner_join(df4)) )
+  for( i in 2:100)
+    expect_equal( res[,1], res[,i] )
+})
+
+test_that( "left_join handles mix of encodings in column names (#1571)", {
+
+  df1 <- tibble::data_frame(x = 1:6, foo = 1:6)
+  names(df1)[1] <- "l\u00f8penummer"
+
+  df2 <- tibble::data_frame(x = 1:6, baz = 1:6)
+  names(df2)[1] <- iconv(  "l\u00f8penummer", from = "UTF-8", to  = "latin1" )
+
+  expect_message( res <- left_join( df1, df2 ) )
+  expect_equal( names(res), c("l\u00f8penummer", "foo", "baz") )
+  expect_equal( res$foo, 1:6)
+  expect_equal( res$baz, 1:6)
+  expect_equal( res[["l\u00f8penummer"]], 1:6)
 
 })

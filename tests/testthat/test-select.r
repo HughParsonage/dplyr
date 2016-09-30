@@ -158,3 +158,23 @@ test_that("invalid inputs raise error", {
   expect_error(combine_vars(names(mtcars), list(c(-1, 1))), "positive or negative")
   expect_error(combine_vars(names(mtcars), list(12)), "must be between")
 })
+
+test_that("select succeeds in presence of raw columns (#1803)", {
+  df <- data_frame(a = 1:3, b = as.raw(1:3))
+  expect_identical(select(df, a), df["a"])
+  expect_identical(select(df, b), df["b"])
+  expect_identical(select(df, -b), df["a"])
+})
+
+test_that("select_if can use predicate", {
+  expect_identical(iris %>% select_if(is.factor), iris["Species"])
+})
+
+test_that("select_if fails with databases", {
+  expect_error(memdb_frame(x = 1) %>% select_if(is.numeric) %>% collect())
+})
+
+test_that("select_if keeps grouping cols", {
+  expect_silent(df <- iris %>% group_by(Species) %>% select_if(is.numeric))
+  expect_equal(df, tbl_df(iris[c(5, 1:4)]))
+})

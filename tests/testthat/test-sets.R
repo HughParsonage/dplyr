@@ -54,5 +54,20 @@ test_that("set operations use coercion rules (#799)", {
   expect_equal( res, data_frame(x = letters[1:5]) )
   expect_warning( { res <- setdiff(df2, df1) })
   expect_equal( res, data_frame(x = letters[11:15]) )
+})
 
+test_that("setdiff handles factors with NA (#1526)", {
+  df1 <- data_frame(x = factor(c(NA, "a")))
+  df2 <- data_frame(x = factor("a"))
+
+  res <- setdiff(df1, df2)
+  expect_is( res$x, "factor")
+  expect_equal( levels(res$x), "a")
+  expect_true( is.na(res$x[1]) )
+})
+
+test_that("intersect does not unnecessarily coerce (#1722)", {
+  df <- data_frame(a = 1L)
+  res <- intersect(df,df)
+  expect_is(res$a, "integer")
 })

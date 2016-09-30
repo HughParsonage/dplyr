@@ -65,19 +65,19 @@ sql_build.op_rename <- function(op, con, ...) {
 #' @export
 sql_build.op_arrange <- function(op, con, ...) {
   order_vars <- translate_sql_(op$dots, con, op_vars(op$x))
-  group_vars <- ident(op_grps(op$x))
+  group_vars <- c.sql(ident(op_grps(op$x)), con = con)
 
-  select_query(sql_build(op$x, con), order_by = c(group_vars, order_vars))
+  select_query(sql_build(op$x, con), order_by = order_vars)
 }
 
 #' @export
 sql_build.op_summarise <- function(op, con, ...) {
   select_vars <- translate_sql_(op$dots, con, op_vars(op$x), window = FALSE)
-  group_vars <- ident(op_grps(op$x))
+  group_vars <- c.sql(ident(op_grps(op$x)), con = con)
 
   select_query(
     sql_build(op$x, con),
-    select = c(group_vars, select_vars),
+    select = c.sql(group_vars, select_vars, con = con),
     group_by = group_vars
   )
 }
@@ -94,10 +94,14 @@ sql_build.op_mutate <- function(op, con, ...) {
 
   select_query(
     sql_build(op$x, con),
-    select = c(old_vars, new_vars)
+    select = c.sql(old_vars, new_vars, con = con)
   )
 }
 
+#' @export
+sql_build.op_head <- function(op, con, ...) {
+  select_query(sql_build(op$x, con), limit = op$args$n)
+}
 
 #' @export
 sql_build.op_group_by <- function(op, con, ...) {
@@ -129,7 +133,7 @@ sql_build.op_filter <- function(op, con, ...) {
     # create mutate operation
     mutate_dots <- lapply(where$comp, lazyeval::as.lazy)
     mutated <- sql_build(op_single("mutate", op$x, dots = mutate_dots), con)
-    where_sql <- translate_sql_(where$expr, vars = vars)
+    where_sql <- translate_sql_(where$expr, con = con, vars = vars)
 
     select_query(mutated, select = ident(vars), where = where_sql)
   }
@@ -138,15 +142,24 @@ sql_build.op_filter <- function(op, con, ...) {
 
 #' @export
 sql_build.op_distinct <- function(op, con, ...) {
-  if (length(op$dots) > 0 && !op$args$.keep_all) {
-    stop("Can't calculate distinct only on specified columns with SQL",
-      call. = FALSE)
-  }
+  if (length(op$dots) == 0) {
+    select_query(
+      sql_build(op$x, con),
+      distinct = TRUE
+    )
+  } else {
+    if (op$args$.keep_all) {
+      stop("Can't calculate distinct only on specified columns with SQL unless .keep_all is FALSE",
+           call. = FALSE)
+    }
 
-  select_query(
-    sql_build(op$x, con),
-    distinct = TRUE
-  )
+    group_vars <- c.sql(ident(names(op$dots)), con = con)
+    select_query(
+      sql_build(op$x, con),
+      select = group_vars,
+      group_by = group_vars
+    )
+  }
 }
 
 # Dual table ops --------------------------------------------------------

@@ -461,6 +461,10 @@ test_that("n_distinct front end supports na.rm argument (#1052)", {
   expect_equal( n_distinct(x, na.rm = TRUE), 3L )
 })
 
+test_that("n_distinct without arguments stops (#1957)", {
+  expect_error( n_distinct(), "at least one column for n_distinct" )
+})
+
 test_that("hybrid evaluation does not take place for objects with a class (#1237)", {
   mean.foo <- function(x) 42
   df <- data_frame( x = structure(1:10, class = "foo" ) )
@@ -548,6 +552,11 @@ test_that("n_distinct handles multiple columns (#1084)", {
   expect_equal( res$n, c(2L,4L) )
 })
 
+test_that("n_distinct stops if no columns are passed (#1957)", {
+  df <- data.frame( x = rep(1:4, each = 2), y = rep(1:2, each = 4), g = rep(1:2, 4))
+  expect_error(summarise( df, nd = n_distinct(), n = n()), "at least one column for n_distinct" )
+})
+
 test_that("hybrid max works when not used on columns (#1369)", {
   df <- data_frame(x = 1:1000)
   y <- 1:10
@@ -633,4 +642,102 @@ test_that("summarise() correctly coerces factors with different levels (#1678)",
   expect_is( res$z, "factor")
   expect_equal( levels(res$z), c("a", "b") )
   expect_equal( as.character(res$z), c("a", "b", "b") )
+})
+
+test_that("summarise works if raw columns exist but are not involved (#1803)", {
+  df <- data_frame(a = 1:3, b = as.raw(1:3))
+  expect_equal(summarise(df, c = sum(a)), data_frame(c = 6L))
+})
+
+test_that("summarise fails gracefully on raw columns (#1803)", {
+  df <- data_frame(a = 1:3, b = as.raw(1:3))
+  expect_error( summarise(df, c = b[[1]]), 'Unsupported type RAWSXP for column "c"' )
+})
+
+test_that("dim attribute is stripped from grouped summarise (#1918)", {
+  df <- data.frame(a = 1:3, b = 1:3)
+
+  df_regular <- summarise(df, b = scale(b)[1,1])
+  df_grouped <- summarise(group_by(df, a), b = scale(b))
+  df_rowwise <- summarise(rowwise(df), b = scale(b))
+
+  expect_null(dim(df$b))
+  expect_null(dim(df_grouped$b))
+  expect_null(dim(df_rowwise$b))
+})
+
+test_that("typing and NAs for grouped summarise (#1839)", {
+  expect_identical(
+    data_frame(id = 1L, a = NA_character_) %>%
+      group_by(id) %>%
+      summarise(a = a[[1]]) %>%
+      .$a,
+    NA_character_)
+
+  expect_identical(
+    data_frame(id = 1:2, a = c(NA, "a")) %>%
+      group_by(id) %>%
+      summarise(a = a[[1]]) %>%
+      .$a,
+    c(NA, "a"))
+
+  # Properly upgrade NA (logical) to character
+  expect_identical(
+    data_frame(id = 1:2, a = 1:2) %>%
+      group_by(id) %>%
+      summarise(a = ifelse(all(a < 2), NA, "yes")) %>%
+      .$a,
+    c(NA, "yes"))
+
+  expect_error(
+    data_frame(id = 1:2, a = list(1, "2")) %>%
+      group_by(id) %>%
+      summarise(a = a[[1]]) %>%
+      .$a,
+    "can't promote")
+
+  expect_identical(
+    data_frame(id = 1:2, a = list(1, "2")) %>%
+      group_by(id) %>%
+      summarise(a = a[1]) %>%
+      .$a,
+    list(1, "2"))
+})
+
+test_that("typing and NAs for rowwise summarise (#1839)", {
+  expect_identical(
+    data_frame(id = 1L, a = NA_character_) %>%
+      rowwise %>%
+      summarise(a = a[[1]]) %>%
+      .$a,
+    NA_character_)
+
+  expect_identical(
+    data_frame(id = 1:2, a = c(NA, "a")) %>%
+      rowwise %>%
+      summarise(a = a[[1]]) %>%
+      .$a,
+    c(NA, "a"))
+
+  # Properly promote NA (logical) to character
+  expect_identical(
+    data_frame(id = 1:2, a = 1:2) %>%
+      group_by(id) %>%
+      summarise(a = ifelse(all(a < 2), NA, "yes")) %>%
+      .$a,
+    c(NA, "yes"))
+
+  expect_error(
+    data_frame(id = 1:2, a = list(1, "2")) %>%
+      rowwise %>%
+      summarise(a = a[[1]]) %>%
+      .$a,
+    "can't promote")
+
+  expect_error(
+    data_frame(id = 1:2, a = list(1, "2")) %>%
+      rowwise %>%
+      summarise(a = a[1]) %>%
+      .$a,
+    "can't promote")
 })

@@ -69,13 +69,13 @@ test_that("arrange converts desc", {
   expect_equal(out$order_by, sql('"x" DESC'))
 })
 
-test_that("grouped arrange orders by groups", {
+test_that("grouped arrange doesn't order by groups", {
   out <- lazy_frame(x = 1, y = 1) %>%
     group_by(x) %>%
     arrange(y) %>%
     sql_build()
 
-  expect_equal(out$order_by, sql('"x"', '"y"'))
+  expect_equal(out$order_by, sql('"y"'))
 })
 
 
@@ -87,7 +87,7 @@ test_that("summarise generates group_by and select", {
     summarise(n = n()) %>%
     sql_build()
 
-  expect_equal(out$group_by, ident("x"))
+  expect_equal(out$group_by, sql('"x"'))
   expect_equal(out$select, sql('"x"', 'COUNT() AS "n"'))
 })
 
@@ -136,6 +136,17 @@ test_that("distinct sets flagged", {
     distinct() %>%
     sql_build()
   expect_true(out2$distinct)
+})
+
+
+# head --------------------------------------------------------------------
+
+test_that("head limits rows", {
+  out <- lazy_frame(x = 1:100) %>%
+    head(10) %>%
+    sql_build()
+
+  expect_equal(out$limit, 10)
 })
 
 
